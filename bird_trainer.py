@@ -33,8 +33,8 @@ def train_bird(Name):
             #Enumerate States and timed exit conditions
             states = [
                 {'name': 'Initial'},  
-                {'name': 'Acclimation', 'timeout': 300,  'on_timeout': 'Begin'},
-                {'name': 'ITI',         'timeout': 100,  'on_timeout': 'Trial_Start'},
+                {'name': 'Acclimation', 'timeout': 1,  'on_timeout': 'Begin'},
+                {'name': 'ITI',         'timeout': 1,  'on_timeout': 'Trial_Start'},
                 {'name': 'Trial',       'timeout': 20,   'on_timeout': 'Trial_End',   'on_enter': 'Trial_Toggle', 'on_exit': 'Trial_Toggle'}, 
                 {'name': 'DataLog'}
             ]
@@ -149,8 +149,8 @@ def train_bird(Name):
     chans       = 1 #1 channel
     samp_rate   = 44100 #44.1kHz sampling rate
     chunk       = 2^13 #2^13 samples for buffer
-    record_secs = 3330 #seconds to record, same as desired session length including acclimation
-    dev_index   = 2 #device index found by p.get_device_info_by_index(ii)
+    record_secs = 60 #seconds to record, same as desired session length including acclimation
+    dev_index   = 1 #device index found by p.get_device_info_by_index(ii)
 
     #Song detection parameters
     song_window       = 1 #Number of seconds which a song event should occupy
