@@ -13,11 +13,35 @@ def train_bird(Name):
     import os.path
     from datetime import datetime
     import gpiozero
+    import configparser
     
     #Block an Error Message
     import warnings
-    warnings.simplefilter("ignore", DeprecationWarning) #it doesn't like my using np.fromstring, but its fine 
+    warnings.simplefilter("ignore", DeprecationWarning) #it doesn't like my using np.fromstring, but its fine
     
+    #Read in the config file
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    
+    #Expiramental parameters
+    Acclimation = int(config.get('Expiramental_Parameters', 'acclimation')) #length of acclimation (s)
+    ITI = int(config.get('Expiramental_Parameters', 'ITI')) #length of ITI (s)
+    Trial = int(config.get('Expiramental_Parameters', 'trial')) #length of Trial (s)
+    record_secs =  int(config.get('Expiramental_Parameters', 'total_length')) #length of whole session (s)     
+
+    
+    #Stream Parameters
+    chans       =  int(config.get('Stream_Parameters', 'channels')) #number channel
+    samp_rate   =  int(config.get('Stream_Parameters', 'sample_rate')) #44.1kHz sampling rate
+    chunk       =  int(config.get('Stream_Parameters', 'chunk')) #samples for buffer
+    dev_index   =  int(config.get('Stream_Parameters', 'device_index')) #device index found by p.get_device_info_by_index(ii)
+    
+    #Detection Parameters
+    song_window       = float(config.get('Detection_Parameters', 'song_window')) #Number of seconds which a song event should occupy
+    trigger_threshold = float(config.get('Detection_Parameters', 'trigger_threshold')) #Power ratio threshold
+    trigger_fraction  = float(config.get('Detection_Parameters', 'trigger_fraction')) #Fraction of measurments within song_window that must be above threshold to trigger 
+    reward_buffer     = float(config.get('Detection_Parameters', 'reward_buffer')) #Reward can't be triggered within this many seconds of a previous reward 
+
     #Define a bird statemachine object
     #Create a new machine class (CustomStateMachine) which includes the timeout functionality
     @add_state_features(Timeout)
@@ -28,14 +52,22 @@ def train_bird(Name):
     class Bird(CustomStateMachine):
 
         #Define the structure of the state machine
-        def __init__(self, Name):
+        def __init__(self, Name, Acclimation, ITI, Trial):
 
+            #Initialize the hardware and data recording
+            self.Set_Name(Name) #Sets the name
+            self.Set_Experiment(Acclimation, ITI, Trial) #sets the experimental paradigm
+            self.Set_Last_Reward() #Initialize the reward buffer 
+            self.Init_GPIO() #Initialize the solenoid valve, LEDs, and smartscreen
+            self.Init_Performance() #Intialize performance tracking
+
+            
             #Enumerate States and timed exit conditions
             states = [
                 {'name': 'Initial'},  
-                {'name': 'Acclimation', 'timeout': 1,  'on_timeout': 'Begin'},
-                {'name': 'ITI',         'timeout': 1,  'on_timeout': 'Trial_Start'},
-                {'name': 'Trial',       'timeout': 20,   'on_timeout': 'Trial_End',   'on_enter': 'Trial_Toggle', 'on_exit': 'Trial_Toggle'}, 
+                {'name': 'Acclimation', 'timeout': self.Acclimation,     'on_timeout': 'Begin'},
+                {'name': 'ITI',         'timeout': self.ITI,             'on_timeout': 'Trial_Start'},
+                {'name': 'Trial',       'timeout': self.Trial,           'on_timeout': 'Trial_End',   'on_enter': 'Trial_Toggle', 'on_exit': 'Trial_Toggle'}, 
                 {'name': 'DataLog'}
             ]
 
@@ -55,12 +87,9 @@ def train_bird(Name):
                              initial = 'Initial', \
                              ignore_invalid_triggers=True)
 
-            #Initialize the hardware and data recording
-            self.Set_Name(Name)
-            self.Set_Last_Reward() #Initialize the reward buffer 
-            self.Init_GPIO() #Initialeze the solenoid valve
-            self.Init_Performance() #Intialize performance tracking
+            #Lets Start
             self.Initialize() #Move into acclimation
+
 
         #Define the functions required for reward and external tracking
         #Initialize the solenoid valve as a digital "LED" (binary states)
@@ -95,12 +124,21 @@ def train_bird(Name):
         def Set_Name(self, Name):
             self.name = Name
 
+        def Set_Experiment(self, Acclimation, ITI, Trial):
+            self.Acclimation = Acclimation
+            self.ITI = ITI
+            self.Trial = Trial
+
         def Init_Performance(self): #Creates the necessary variables
             self.session_data = [] #Vector of rewards given in trials of a single session. First entry is first trial
             self.trial_data = 0 #Holding variable to count rewards in the current trial
 
             self.data_path = Path('Data_Logs/' + self.name + '.csv') #build path to the data log file
             self.datetime = str(datetime.now())#Get the date and time the session began
+
+            #Make sure that Data_Logs/ exists, otherwise make it
+            if (not os.path.exists(os.getcwd() + '/Data_Logs/')):
+                os.makedirs(os.getcwd() + '/Data_Logs/')
 
         def Track_Performance(self):
             self.session_data.append(self.trial_data) #Store the last trial's performance
@@ -137,27 +175,12 @@ def train_bird(Name):
                 self.session_data = [self.name, self.datetime, session_num, fraction_sung] + self.session_data
 
                 #write in the header and the data
-                with open(str(self.data_path), "w") as data_log:
+                with open(str(self.data_path), "w+") as data_log:
                     writer = csv.writer(data_log, lineterminator ='\n')
                     writer.writerow(header)
                     writer.writerow(self.session_data)
-                    
- 
-    #Set up the audiostream
-    #Pyaudio stream parameters
-    form_1      = pyaudio.paInt16 #16-bit resolution on the mic
-    chans       = 1 #1 channel
-    samp_rate   = 44100 #44.1kHz sampling rate
-    chunk       = 2^13 #2^13 samples for buffer
-    record_secs = 60 #seconds to record, same as desired session length including acclimation
-    dev_index   = 1 #device index found by p.get_device_info_by_index(ii)
 
-    #Song detection parameters
-    song_window       = 1 #Number of seconds which a song event should occupy
-    trigger_threshold = 1.7 #Power ratio threshold
-    trigger_fraction  = .5 #Fraction of measurments within song_window that must be above threshold to trigger 
-    reward_buffer     = 3 #Reward can't be triggered within this many seconds of a previous reward 
-    
+                        
     #Define the audio ocallback function
     def callback(in_data, frame_count, time_info, status):    
         chunk_data = np.fromstring(in_data, np.int16) #convert the audio data from a string to an array
@@ -165,7 +188,7 @@ def train_bird(Name):
 
         power_rats.append(sum(dfft[1:]) / (dfft[0]+1)) #determine power_ratio
         time_stamps.append(time_info['input_buffer_adc_time']) #add timestamp
-
+        
         #trim the power_rats and timestamp vectors to only include data from the last song_window
         trim = True
         idx = 0
@@ -196,7 +219,7 @@ def train_bird(Name):
     p = pyaudio.PyAudio()
 
     #create pyaudio stream
-    stream = p.open(format             = form_1, \
+    stream = p.open(format             = pyaudio.paInt16, \
                     rate               = samp_rate, \
                     channels           = chans, \
                     input_device_index = dev_index, \
@@ -209,7 +232,7 @@ def train_bird(Name):
     os.system('clear')
     
     #start the pyaudio stream
-    bird = Bird(Name)
+    bird = Bird(Name, Acclimation, ITI, Trial)
     stream.start_stream()
     time.sleep(record_secs) #Keep the current thread active during recording
     
@@ -254,6 +277,7 @@ for opt, arg in opts:
 if (Bird_Name == 'NotABird_Blah_Blah_Blah'):
     usage()
     sys.exit(2)
+
 
 #Train the bird
 train_bird(Bird_Name)
