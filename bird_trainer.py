@@ -38,7 +38,7 @@ def train_bird(Name):
     
     #Detection Parameters
     song_window       = float(config.get('Detection_Parameters', 'song_window')) #Number of seconds which a song event should occupy
-    trigger_threshold = float(config.get('Detection_Parameters', 'trigger_threshold')) #Power ratio threshold
+    power_rat_90      = float(config.get('Detection_Parameters', 'power_rat_90')) #Power ratio threshold
     trigger_fraction  = float(config.get('Detection_Parameters', 'trigger_fraction')) #Fraction of measurments within song_window that must be above threshold to trigger 
     reward_buffer     = float(config.get('Detection_Parameters', 'reward_buffer')) #Reward can't be triggered within this many seconds of a previous reward 
 
@@ -201,9 +201,9 @@ def train_bird(Name):
                 trim = False
 
         #Trigger Condition for Song detection
-        #If more than trigger_fraction of chunks within the last song_window have a power ratio >= trigger_threshold
+        #If more than trigger_fraction of chunks within the last song_window have a power ratio >= power_rat_90
         #AND if its been more than reward_buffer since the last time
-        if ((sum(r > trigger_threshold for r in power_rats) / len(power_rats) >= trigger_fraction) and \
+        if ((sum(r > power_rat_90 for r in power_rats) / len(power_rats) >= trigger_fraction) and \
             (time_stamps[-1] >= (bird.Reward_Time + reward_buffer))): 
 
             bird.Song() #Trigger the FSM reward
