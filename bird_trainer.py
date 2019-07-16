@@ -88,6 +88,7 @@ def train_bird(Name):
                              ignore_invalid_triggers=True)
 
             #Lets Start
+            self.Set_Name(Name) #Sets the name (again, it has to be twice, I think it needs to get passed into the Machine.__init__, but idk and idc.
             self.Initialize() #Move into acclimation
 
 
@@ -157,7 +158,7 @@ def train_bird(Name):
 
                 #Add animal ID, datetime, session #, and fraction of sung trials to the session data
                 self.session_data = [self.name, self.datetime, session_num, fraction_sung] + self.session_data
-
+                
                 #Write the session_data into the data log as a new row
                 with open(str(self.data_path), "a") as data_log:
                     writer = csv.writer(data_log, lineterminator ='\n')
