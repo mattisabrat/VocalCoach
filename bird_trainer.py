@@ -188,6 +188,7 @@ def train_bird(Name):
         dfft = abs(np.fft.rfft(chunk_data)) #perform fft
 
         power_rats.append(sum(dfft[1:]) / (dfft[0]+1)) #determine power_ratio
+        #print(power_rats[-1])
         time_stamps.append(time_info['input_buffer_adc_time']) #add timestamp
         
         #trim the power_rats and timestamp vectors to only include data from the last song_window
@@ -234,6 +235,7 @@ def train_bird(Name):
     
     #start the pyaudio stream
     bird = Bird(Name, Acclimation, ITI, Trial)
+    time.sleep(2) #allow time for init, otherwise bird not defined first instance of the callback
     stream.start_stream()
     time.sleep(record_secs) #Keep the current thread active during recording
     
