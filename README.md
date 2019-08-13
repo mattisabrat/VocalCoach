@@ -2,7 +2,7 @@
 Raspberry Pi based, automated operant conditioning to elicit song and motor behaviors in head restrained zebra finch.
 
 ## Requirements
-I clone this repo into a python 3.5.3 venv running the following:
+System requires portaudio, can be installed with apt-get. Also needs libatlas-base-dev, also apt-get. I clone this repo into a python 3.5.3 venv running the following, all installed with pip3:
 * PyAudio         - 0.2.11       - active 
 * RPi.GPIO        - 0.6.5        - active 
 * colorzero       - 1.1          - active 
