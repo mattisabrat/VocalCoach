@@ -60,7 +60,7 @@ os.system('clear')
 
 #Make the measurement
 stream.start_stream()
-time.sleep(2) #Keep the current thread active during recording
+time.sleep(10) #Keep the current thread active during recording
 
 #Kill the stream and end the session
 stream.stop_stream() 
@@ -72,9 +72,9 @@ power_rat_mean = np.average(power_rats)
 power_rat_std  = np.std(power_rats)
 power_rat_90   = np.quantile(power_rats, .9)
 
-print(power_rat_mean)
-print(power_rat_std)
-print(power_rat_90)
+print("Power Ratio Average : ", power_rat_mean)
+print("Power Ratio STD:      ",power_rat_std)
+print("90th qunatile:        ",power_rat_90)
 
 #Write the power_rat_90 value into the config file
 config.set('Detection_Parameters', 'power_rat_90', str(power_rat_90))
