@@ -108,6 +108,7 @@ def train_bird(Name):
             time.sleep(0.2) #length of this sleep determines size of water reward
 
             self.reward_solenoid.off()
+            time.sleep(0.8)
             self.reward_LED.off()
 
             #Log the reward
